@@ -1,0 +1,25 @@
+{
+  "name": "gluefoos",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "NODE_ENV=development webpack --colors --watch",
+    "flow:watch": "flow-watch",
+    "build": "BUILD_TARGET=./build NODE_ENV=production webpack --optimize-minimize"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "flo-cast": "git://github.com/renevanderark/flo-cast.git#v1.0.0",
+    "musical-score": "git://github.com/renevanderark/js-musical-score.git#v1.2.1"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-loader": "^7.1.2",
+    "babel-plugin-transform-flow-strip-types": "^6.22.0",
+    "babel-preset-env": "^1.6.1",
+    "flow-watch": "^1.1.1",
+    "webpack": "3.5.5"
+  }
+}
