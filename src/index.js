@@ -1,7 +1,8 @@
 import MusicalScore from "musical-score";
 
 const music = new MusicalScore("https://renevanderark.github.io/arkaic/out/");
-let instrument = "bass";
+const instruments = ["bass", "guitar",  "horn", "piano", "string"]
+let instrument = 0;
 let audioMap = {};
 let octave = 3;
 const keyMap = {
@@ -25,6 +26,22 @@ const keyMap = {
 };
 
 
+const getDuration = dur => dur > 1000 ?
+  "w" : dur > 500 ?
+  "h" : dur > 250 ?
+  "q" : dur > 125 ?
+  "i" : dur > 64 ?
+  "s" : dur > 32 ?
+  "t" : dur > 16 ?
+  "x" : "o";
+
+
+const record = ({ note, oct }, { startTime }) => {
+  const duration = new Date().getTime() - startTime;
+  console.log(`${startTime}: ${note}${oct}${getDuration(duration)}`);
+}
+
+
 window.addEventListener("keydown", ev => {
   if (ev.key === "ArrowUp" && octave < 7) {
     octave++;
@@ -34,9 +51,19 @@ window.addEventListener("keydown", ev => {
     octave--;
     return ev.preventDefault();
   }
+  if (ev.key === "Tab") {
+    instrument++;
+    if (instrument >= instruments.length) {
+      instrument = 0;
+    }
+  }
+
   const note = keyMap[ev.key];
   if (note && !audioMap[ev.key]) {
-    audioMap[ev.key] = music.playNote(instrument, `${keyMap[ev.key].note}${octave + keyMap[ev.key].oct}w`);
+    audioMap[ev.key] = {
+      audio: music.playNote(instruments[instrument], `${keyMap[ev.key].note}${octave + keyMap[ev.key].oct}w`),
+      startTime: new Date().getTime()
+    };
   }
   return ev.preventDefault();
 });
@@ -44,7 +71,9 @@ window.addEventListener("keydown", ev => {
 window.addEventListener("keyup", ev => {
   const note = keyMap[ev.key];
   if (note && audioMap[ev.key]) {
-    audioMap[ev.key].pause();
+    audioMap[ev.key].audio.pause();
+    record(keyMap[ev.key], audioMap[ev.key]);
+
     delete audioMap[ev.key];
   }
   return ev.preventDefault();
