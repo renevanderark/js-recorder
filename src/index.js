@@ -25,8 +25,20 @@ const keyMap = {
   "/": {note: "E", oct: 1},
 };
 
+const durations = {
+    "w": 2000,
+    "h": 1000,
+    "q": 500,
+    "i": 250,
+    "s": 125,
+    "t": 64,
+    "x": 32,
+    "o": 16
+};
 
-const getDuration = dur => dur > 1000 ?
+
+
+const normalizeDuration = dur => dur > 1000 ?
   "w" : dur > 500 ?
   "h" : dur > 250 ?
   "q" : dur > 125 ?
@@ -35,20 +47,84 @@ const getDuration = dur => dur > 1000 ?
   "t" : dur > 16 ?
   "x" : "o";
 
+const getRestDuration = dur => dur > 2000 ?
+  "w" : dur > 1000 ?
+  "h" : dur > 500 ?
+  "q" : dur > 250 ?
+  "i" : dur > 125 ?
+  "s" : dur > 64 ?
+  "t" : dur > 32 ?
+  "x" : "o";
+
+let currentRecording = [];
+let recording = false;
+let recordingStartTime = new Date().getTime();
 
 const record = ({ note, oct }, { startTime }) => {
   const duration = new Date().getTime() - startTime;
-  console.log(`${startTime}: ${note}${oct}${getDuration(duration)}`);
+  if (recording) {
+    currentRecording.push({
+      note: `${note}${oct}${normalizeDuration(duration)}`,
+      startTime: startTime - recordingStartTime
+    })
+  }
 }
 
+const getTrackPosition = (track) =>
+  track.map(n => durations[n[n.length - 1]]).reduce((a,b) => a + b, 0);
+
+const recordNote = (track, noteObj) => {
+  let restTime = noteObj.startTime - getTrackPosition(track);
+  while (restTime > 0) {
+    const normalizedDuration = getRestDuration(restTime);
+    const dur = durations[normalizedDuration];
+    restTime -= dur;
+    track.push(`R${normalizedDuration}`);
+  }
+  track.push(noteObj.note);
+}
+
+const generateTracks = () => {
+  let tracks = [[],[],[],[],[],[],[],[]];
+  console.log(currentRecording);
+  currentRecording.forEach(noteObj => {
+    const availableTracks = tracks.filter(track => getTrackPosition(track) < noteObj.startTime);
+    if (availableTracks.length > 0) {
+      recordNote(availableTracks[0], noteObj);
+    } else {
+      console.warn("No available tracks");
+    }
+  });
+  const recordedScore = new MusicalScore("https://renevanderark.github.io/arkaic/out/");
+  console.log(tracks);
+  tracks.filter(track => track.length > 0).forEach(track => {
+    console.log(track.join(" "));
+    recordedScore.addTrack(instruments[instrument], track.join(" "))
+  });
+  recordedScore.play();
+}
 
 window.addEventListener("keydown", ev => {
+  if (ev.key === " ") {
+    recording = !recording;
+    if (recording) {
+      recordingStartTime = new Date().getTime();
+    } else {
+      generateTracks();
+
+      currentRecording = [];
+    }
+    document.getElementById("recording").innerHTML = recording ? "recording" : "not recording";
+  }
+
   if (ev.key === "ArrowUp" && octave < 7) {
     octave++;
+    document.getElementById("octave").innerHTML = octave;
     return ev.preventDefault();
   }
   if (ev.key === "ArrowDown" && octave > 2) {
     octave--;
+    document.getElementById("octave").innerHTML = octave;
     return ev.preventDefault();
   }
   if (ev.key === "Tab") {
@@ -56,6 +132,8 @@ window.addEventListener("keydown", ev => {
     if (instrument >= instruments.length) {
       instrument = 0;
     }
+    document.getElementById("instrument").innerHTML = instruments[instrument];
+    return ev.preventDefault();
   }
 
   const note = keyMap[ev.key];
@@ -72,7 +150,7 @@ window.addEventListener("keyup", ev => {
   const note = keyMap[ev.key];
   if (note && audioMap[ev.key]) {
     audioMap[ev.key].audio.pause();
-    record(keyMap[ev.key], audioMap[ev.key]);
+    record({note: keyMap[ev.key].note, oct: keyMap[ev.key].oct + octave}, audioMap[ev.key]);
 
     delete audioMap[ev.key];
   }
